@@ -8,10 +8,7 @@ namespace Resizer
     {
         public static string GetRootDirectory()
         {
-            var codeBase = Assembly.GetExecutingAssembly().CodeBase;
-            var uri = new UriBuilder(codeBase);
-            var path = Uri.UnescapeDataString(uri.Path);
-            return Path.GetDirectoryName(path);
+            return AppContext.BaseDirectory;
         }
 
         public static void Main(params string[] paths)
@@ -27,6 +24,7 @@ namespace Resizer
             {
                 Directory.CreateDirectory(outPath);
             }
+            Console.WriteLine("Output folder: " + outPath);
 
             var set = new HashSet<string>();
             foreach (var path in paths)
