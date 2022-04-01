@@ -1,10 +1,19 @@
 ﻿using System.Drawing;
 using System.Drawing.Imaging;
+using System.Reflection;
 
 namespace Resizer
 {
     public static class Program
     {
+        public static string GetRootDirectory()
+        {
+            var codeBase = Assembly.GetExecutingAssembly().CodeBase;
+            var uri = new UriBuilder(codeBase);
+            var path = Uri.UnescapeDataString(uri.Path);
+            return Path.GetDirectoryName(path);
+        }
+
         public static void Main(params string[] paths)
         {
             if (paths.Length == 0)
@@ -12,7 +21,8 @@ namespace Resizer
                 Console.WriteLine("Provide a path");
             }
 
-            const string outPath = "output";
+            var rootDir = GetRootDirectory();
+            var outPath = Path.Combine(rootDir, "output");
             if (!Directory.Exists(outPath))
             {
                 Directory.CreateDirectory(outPath);
@@ -21,10 +31,20 @@ namespace Resizer
             var set = new HashSet<string>();
             foreach (var path in paths)
             {
-                var files = GetAllFiles(path, "*.*");
+                var files = GetAllFiles(path, "*.*").ToArray();
                 foreach (var file in files)
                 {
                     var fi = new FileInfo(file);
+                    var folder = fi.Directory.FullName.Replace(path, "");
+                    if (folder.StartsWith("\\"))
+                    {
+                        folder = folder.Substring(1);
+                    }
+                    var outFolder = Path.Combine(outPath, folder);
+                    if (!string.IsNullOrEmpty(outFolder) && !Directory.Exists(outFolder))
+                    {
+                        Directory.CreateDirectory(outFolder);
+                    }
                     var ext = fi.Extension;
                     var newFileName = Path.GetFileNameWithoutExtension(fi.Name) + ".jpg";
                     switch (ext)
@@ -36,7 +56,7 @@ namespace Resizer
                         case ".tiff":
                         case ".bmp":
                             var image = Image.FromFile(file);
-                            SaveJpeg(Path.Combine(outPath, newFileName), image, 0);
+                            SaveJpeg(Path.Combine(outFolder, newFileName), image, 0);
                             break;
                         default:
                             if (set.Add(ext))
@@ -46,7 +66,7 @@ namespace Resizer
 
                             break;
                     }
-                        
+
                 }
             }
         }
@@ -60,12 +80,20 @@ namespace Resizer
         {
             if (quality < 0 || quality > 100)
                 throw new ArgumentOutOfRangeException("quality must be between 0 and 100.");
-            
+
             // JPEG image codec 
             var jpegCodec = GetEncoderInfo("image/jpeg");
             var encoderParams = new EncoderParameters(1);
             encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
-            img.Save(path, jpegCodec, encoderParams);
+            try
+            {
+                img.Save(path, jpegCodec, encoderParams);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Failed to convert " + path);
+                Console.WriteLine("Error: " + e.Message);
+            }
         }
 
         /// <summary> 
