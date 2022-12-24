@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Reflection;
 
@@ -54,7 +55,8 @@ namespace Resizer
                         case ".tiff":
                         case ".bmp":
                             var image = Image.FromFile(file);
-                            SaveJpeg(Path.Combine(outFolder, newFileName), image, 0);
+                            image = ResizeImage(image, 750, 1000);
+                            SaveJpeg(Path.Combine(outFolder, newFileName), image, 80);
                             break;
                         default:
                             if (set.Add(ext))
@@ -83,6 +85,7 @@ namespace Resizer
             var jpegCodec = GetEncoderInfo("image/jpeg");
             var encoderParams = new EncoderParameters(1);
             encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
+
             try
             {
                 img.Save(path, jpegCodec, encoderParams);
@@ -92,6 +95,38 @@ namespace Resizer
                 Console.WriteLine("Failed to convert " + path);
                 Console.WriteLine("Error: " + e.Message);
             }
+        }
+
+        /// <summary>
+        /// Resize the image to the specified width and height.
+        /// </summary>
+        /// <param name="image">The image to resize.</param>
+        /// <param name="width">The width to resize to.</param>
+        /// <param name="height">The height to resize to.</param>
+        /// <returns>The resized image.</returns>
+        public static Image ResizeImage(Image image, int width, int height)
+        {
+            var destRect = new Rectangle(0, 0, width, height);
+            var destImage = new Bitmap(width, height);
+
+            destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
+
+            using (var graphics = Graphics.FromImage(destImage))
+            {
+                graphics.CompositingMode = CompositingMode.SourceCopy;
+                graphics.CompositingQuality = CompositingQuality.HighQuality;
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.SmoothingMode = SmoothingMode.HighQuality;
+                graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                using (var wrapMode = new ImageAttributes())
+                {
+                    wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+                    graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+                }
+            }
+
+            return (Image)destImage;
         }
 
         /// <summary> 
