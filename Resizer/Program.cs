@@ -66,7 +66,7 @@ namespace Resizer
 
                             break;
                     }
-
+                    Console.WriteLine("processed " + file);
                 }
             }
         }
@@ -122,7 +122,16 @@ namespace Resizer
                 using (var wrapMode = new ImageAttributes())
                 {
                     wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-                    graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+                    var ratio = (double)width / height;
+                    if (image.Width > image.Height)
+                    {
+                        var sourceWidth = (int)(image.Height * ratio);
+                        graphics.DrawImage(image, destRect, (image.Width - sourceWidth) / 2, 0, sourceWidth, image.Height, GraphicsUnit.Pixel, wrapMode);
+                    }
+                    else
+                    {
+                        graphics.DrawImage(image, destRect, 0, 0, (int)(image.Height * ratio), image.Height, GraphicsUnit.Pixel, wrapMode);
+                    }
                 }
             }
 
